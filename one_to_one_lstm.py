@@ -6,16 +6,17 @@ import pylab as pl
 from IPython import display
 
 class LSTM(nn.Module):
-  def __init__(self, input_size=1, hidden_layer_size=10, output_size=1):
+  def __init__(self, input_size=1, hidden_layer_size=10, output_size=1,num_layers=1):
     super().__init__()
     self.hidden_layer_size=hidden_layer_size
-    self.lstm=nn.LSTM(input_size,hidden_layer_size)
+    self.num_layers=num_layers
+    self.lstm=nn.LSTM(input_size,hidden_layer_size,num_layers)
 
     self.linear=nn.Linear(hidden_layer_size,output_size)
 
 
-    self.hidden_cell=(torch.zeros(1,1,self.hidden_layer_size),
-                      torch.zeros(1,1,hidden_layer_size))
+    self.hidden_cell=(torch.zeros(num_layers,1,self.hidden_layer_size),
+                      torch.zeros(num_layers,1,hidden_layer_size))
     self.loss_array = []
 
   def forward(self, input_seq):
@@ -27,10 +28,10 @@ class LSTM(nn.Module):
   def test(self,train_inout_seq,loss_function,device):
     loss=[]
     preds=[]
-    for seq,  _, labels in train_inout_seq:
+    for seq, labels in train_inout_seq:
       with torch.no_grad():
-        self.hidden_cell=(torch.zeros(1,1,self.hidden_layer_size).to(device),
-                         torch.zeros(1,1,self.hidden_layer_size).to(device))
+        self.hidden_cell=(torch.zeros(self.num_layers,1,self.hidden_layer_size).to(device),
+                         torch.zeros(self.num_layers,1,self.hidden_layer_size).to(device))
         y_pred = self.forward(seq)
         preds.append(y_pred.item())
         y_pred=y_pred.view(1,-1).to(device)
@@ -40,10 +41,10 @@ class LSTM(nn.Module):
   def train(self, train_inout_seq, optimizer, loss_function, device, epochs=10, lr=1e-5,draw_fig=False):
     for i in range(epochs):
       loss = []
-      for seq, _,labels in train_inout_seq:
+      for seq, labels in train_inout_seq:
         optimizer.zero_grad()
-        self.hidden_cell=(torch.zeros(1,1,self.hidden_layer_size).to(device),
-                         torch.zeros(1,1,self.hidden_layer_size).to(device))
+        self.hidden_cell=(torch.zeros(self.num_layers,1,self.hidden_layer_size).to(device),
+                         torch.zeros(self.num_layers,1,self.hidden_layer_size).to(device))
         y_pred = self.forward(seq)
         y_pred=y_pred.view(1,-1).to(device)
         single_loss=loss_function(y_pred,labels)
